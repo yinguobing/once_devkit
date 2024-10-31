@@ -12,6 +12,7 @@ import numpy as np
 from scipy.spatial.transform import Rotation
 from argparse import ArgumentParser
 import rerun as rr
+import rerun.blueprint as rrb
 
 # Add argument for dataset root path
 parser = ArgumentParser()
@@ -398,10 +399,32 @@ if __name__ == "__main__":
     # Set data splits to be used
     splits = ["train", "val", "test"]
     dataset = ONCE(args.dataset_root, splits)
+
+    # Create a blueprint
+    blueprint = rrb.Blueprint(
+        rrb.Horizontal(
+            contents=[
+                rrb.Spatial3DView(
+                    name=f"points",
+                    origin=f"/points",
+                ),
+                rrb.Grid(
+                    contents=[
+                        rrb.Spatial2DView(
+                            name=f"{cam_tag}",
+                            origin=f"/images/{cam_tag}",
+                        )
+                        for cam_tag in dataset.camera_tags
+                    ]
+                ),
+            ]
+        )
+    )
+    rr.send_blueprint(blueprint)
+
     seq_id = list(dataset.train_split_list)[0]
     frame_ids = list(dataset.train_info[seq_id].keys())
     for frame_id in frame_ids:
-
         # Point cloud
         points = dataset.load_point_cloud(seq_id, frame_id)
         rr.set_time_sequence("main", int(frame_id))
